@@ -121,6 +121,10 @@ object Store {
         p(c).edit().putString("grip", address).putString("gripName", name).apply()
     }
 
+    fun forgetGrip(c: Context) {
+        p(c).edit().remove("grip").remove("gripName").apply()
+    }
+
     fun snoozeAt(c: Context): Long = p(c).getLong("snoozeAt", 0L)
     fun snoozeId(c: Context): Long = p(c).getLong("snoozeId", -1L)
     fun setSnooze(c: Context, at: Long, id: Long) {

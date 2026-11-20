@@ -137,7 +137,7 @@ class AlarmService : Service() {
         if (addr == null) { ble = "kein Grip gewählt"; return }
         if (!hasBt(this)) { ble = "Bluetooth-Berechtigung fehlt"; return }
         if (grip == null) {
-            grip = GripBle(this, addr) { s -> ble = s }
+            grip = GripBle(this, addr, true) { s -> ble = s }
             grip?.connect()
         }
     }
@@ -200,8 +200,9 @@ class AlarmService : Service() {
 
     private fun playSound() {
         stopSound()
+        if (sound == "none") return
         val uris = listOfNotNull(
-            sound?.let { Uri.parse(it) },
+            sound?.takeIf { it != "none" }?.let { Uri.parse(it) },
             RingtoneManager.getActualDefaultRingtoneUri(this, RingtoneManager.TYPE_ALARM),
             Settings.System.DEFAULT_ALARM_ALERT_URI,
             RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE),

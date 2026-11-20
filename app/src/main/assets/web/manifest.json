@@ -1,0 +1,3 @@
+{"name":"JBL Grip Licht","short_name":"Grip Licht","start_url":".","display":"standalone","background_color":"#ffffff","theme_color":"#111111",
+ "icons":[{"src":"icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any"}],
+ "shortcuts":[{"name":"Automatik (Relais)","short_name":"Automatik","url":"./?auto","icons":[{"src":"icon.svg","sizes":"any","type":"image/svg+xml"}]}]}

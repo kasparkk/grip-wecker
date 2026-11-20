@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<script src="bridge.js"></script>
+<title>JBL Grip Licht</title>
+<link rel="manifest" href="manifest.json"><link rel="icon" href="icon.svg"><meta name="theme-color" content="#111111">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+body{font:16px system-ui,sans-serif;max-width:520px;margin:24px auto;padding:0 16px}
+button{font:inherit;padding:12px 16px;margin:4px 4px 4px 0;border:1px solid #888;border-radius:10px;background:#fff;cursor:pointer}
+button:disabled{opacity:.4;cursor:default}
+.c{width:56px;height:56px;border-radius:50%;padding:0}
+input[type=range]{width:100%}
+pre{background:#eee;padding:8px;height:110px;overflow:auto;font-size:13px}
+h3{margin:20px 0 6px}
+</style></head><body>
+<h2>JBL Grip Licht</h2>
+<p>Chrome (Laptop oder Android). JBL-App schliessen, Grip anschalten.</p>
+<button id="conn">Verbinden</button> <span id="st">nicht verbunden</span>
+<h3>Fernbedienung (ohne Bluetooth)</h3>
+<p style="margin:0 0 6px;color:#555">Laptop: mit dem Grip verbinden, dann "Relais starten" und Seite offen lassen. Handy: denselben Code eingeben, "Als Fernbedienung" druecken. Kein Bluetooth am Handy noetig.</p>
+<label>Code <input id="rcode" placeholder="mind. 6 Zeichen, geheim" style="width:170px"></label>
+<button id="rhost" disabled>Relais starten</button><button id="rremote">Als Fernbedienung</button>
+<div id="rst" style="font-weight:600;margin:4px 0">Relais aus</div>
+<h3>Wecker (Sonnenaufgang)</h3>
+<p style="margin:0 0 6px;color:#555">Laeuft auf dem Geraet, das mit dem Grip verbunden ist (Laptop). Am Handy als Fernbedienung einstellen, "Speichern" schickt es an den Laptop.</p>
+<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+<input type="time" id="atime" value="07:30" style="font:600 40px system-ui,sans-serif;border:1px solid #888;border-radius:10px;padding:2px 8px">
+<label style="font-size:18px"><input type="checkbox" id="aon" style="width:22px;height:22px;vertical-align:-4px"> An</label>
+</div>
+<div id="anext" style="color:#555;margin:6px 0">Aus</div>
+<div id="adays">Tage (keiner = einmalig):<br></div>
+<div style="margin-top:6px">Sonnenaufgang vorher:
+<select id="arise" style="font:inherit;padding:6px"><option value="10">10 min</option><option value="20" selected>20 min</option><option value="30">30 min</option></select></div>
+<div style="margin-top:6px">Farbverlauf: Rot, Orange, Blau, Helligkeit 3 bis 100 %</div>
+<div style="margin-top:6px">Ton zur Weckzeit:
+<select id="asound" style="font:inherit;padding:6px"><option value="birds">Vogelzwitschern</option><option value="gong">Sanfter Gong</option><option value="beep">Piepen</option><option value="none">Kein Ton (nur Licht)</option></select></div>
+<div id="aready" style="font-size:14px;color:#555;margin:6px 0"></div>
+<button id="asave">Speichern</button><button id="atest">Test (1 min)</button>
+<div id="aring" style="display:none;border:2px solid #e60;border-radius:12px;padding:12px;margin:8px 0;text-align:center">
+<div style="font-weight:600">Wecker klingelt</div>
+<button id="asnooze">Schlummern 9 min</button><button id="astop" style="background:#111;color:#fff">Aus</button></div>
+<h3>Lichtshow</h3>
+<div id="themes"></div>
+<h3>Farbe</h3>
+<button class="c" style="background:linear-gradient(135deg,#ffc27a,#ff7a7a)" data-c="1" disabled></button>
+<button class="c" style="background:linear-gradient(135deg,#ff2a7a,#ff00b0)" data-c="2" disabled></button>
+<button class="c" style="background:linear-gradient(135deg,#3a7bff,#0033cc)" data-c="3" disabled></button>
+<button class="c" style="background:linear-gradient(135deg,#e00,#a00)" data-c="4" disabled></button>
+<h3>Helligkeit <span id="pv">50</span>%</h3>
+<input type="range" id="br" min="3" max="100" value="50" disabled>
+<div><button id="on" disabled>Licht an</button><button id="off" disabled>Licht aus</button></div>
+<h3>Eigene Lichtshow</h3>
+<p style="margin:0 0 6px;color:#555">Der Grip kennt nur 5 Shows, 4 Farben und Helligkeit. Die Show steuert genau diese drei im Takt.</p>
+<div>
+<button data-m="breathe" class="m" disabled>Atmen</button>
+<button data-m="colors" class="m" disabled>Farbwechsel (zum Theme)</button>
+<button data-m="themes" class="m" disabled>Themes rotieren</button>
+<button id="mtab" disabled>Musik (Tab/System teilen)</button>
+<button id="mmic" disabled>Musik (Mikrofon)</button>
+<button id="mstop" disabled>Stopp</button>
+</div>
+<div id="cset">Farben fuer Farbwechsel: <label style="margin-right:10px"><input type="checkbox" value="1" checked> Orange</label><label style="margin-right:10px"><input type="checkbox" value="2" checked> Pink</label><label style="margin-right:10px"><input type="checkbox" value="3" checked> Blau</label><label style="margin-right:10px"><input type="checkbox" value="4" checked> Rot</label></div>
+<div id="mst" style="font-weight:600;margin:4px 0">Keine Show aktiv</div>
+<p style="margin:0 0 6px;color:#555">Farbwechsel laeuft mit jedem Theme: erst die Show starten, dann ein Theme waehlen. Farbkreis antippen stoppt jede Show.</p>
+<label>Tempo <input type="range" id="sp" min="1" max="10" value="5"></label>
+<p style="margin:8px 0 4px;color:#555">Helligkeit waehrend der Show: dazwischen pendelt das Licht (Atmen, Musik). Themes rotieren nutzt nur den hellsten Punkt.</p>
+<label>Dunkelster Punkt <span id="lov">10</span>% <input type="range" id="lo" min="3" max="60" value="10"></label>
+<label>Hellster Punkt <span id="hiv">100</span>% <input type="range" id="hi" min="40" max="100" value="100"></label>
+<div id="beat" style="height:10px;background:#ddd;border-radius:5px;margin-top:8px"><div id="bar" style="height:10px;width:0;background:#e60;border-radius:5px"></div></div>
+<pre id="log"></pre>
+<script>
+const SVC="65786365-6c70-6f69-6e74-2e636f6d0000",RX="65786365-6c70-6f69-6e74-2e636f6d0001",TX="65786365-6c70-6f69-6e74-2e636f6d0002";
+// IDs und Werte aus dem Bluetooth-Log, mit Bildschirmaufnahme abgeglichen, am Grip getestet
+const F={theme:0x0d40,brightness:0x0d41,color:0x0d46};
+const THEMES={FREEZE:0x8c,BOUNCE:0x89,TRIM:0x8a,SWITCH:0x8b,NEON:0x81};
+const $=i=>document.getElementById(i);let tx;
+["lo","hi"].forEach(i=>$(i).addEventListener("input",()=>{$(i+"v").textContent=$(i).value}));
+const log=t=>{$("log").textContent+=t+"\n";$("log").scrollTop=1e9};
+function pkt(fid,v){const p=new Uint8Array([fid&255,fid>>8,1,0,v&255]);
+ const h=new Uint8Array([0,0xdd,2,0,1,0,p.length,0]);const o=new Uint8Array(13);o.set(h);o.set(p,8);return o}
+// ---- Relais ueber Supabase Realtime ----
+const SB_URL="https://xrrcuapiugwgqxxatkiq.supabase.co",SB_KEY="sb_publishable_kcP8-40mEnwPGuFwVGigKA_b5swelLm";
+let sb=null,ch=null,relayRole="";
+function raw(f,v){if(tx)return tx.writeValueWithoutResponse(pkt(f,v));
+ if(ch&&relayRole==="remote")return ch.send({type:"broadcast",event:"cmd",payload:{f,v}});
+ return Promise.reject("nicht verbunden")}
+async function joinRelay(role){const code=$("rcode").value.trim();
+ if(code.length<6){log("Bitte einen Code mit mindestens 6 Zeichen eingeben");return}
+ if(role==="host"&&!tx&&!auto){log("Erst mit dem Grip verbinden");return}
+ try{localStorage.setItem("jblcode",code)}catch(e){}
+ if(!window.supabase){log("ERR Supabase-Bibliothek nicht geladen (Internet?)");return}
+ if(!sb)sb=window.supabase.createClient(SB_URL,SB_KEY);
+ if(ch){await sb.removeChannel(ch);ch=null;relayRole=""}
+ ch=sb.channel("jblgrip-"+code,{config:{broadcast:{self:false}}});
+ if(role==="host")ch.on("broadcast",{event:"cmd"},({payload})=>{const f=+payload.f,v=+payload.v;
+  if(![F.theme,F.brightness,F.color].includes(f)||v<0||v>255)return;
+  if(tx)tx.writeValueWithoutResponse(pkt(f,v)).then(()=>log("Relais -> 0x"+f.toString(16)+" = 0x"+v.toString(16))).catch(e=>log("ERR "+e))});
+ alarmRelay(ch,role);
+ ch.subscribe(st=>{if(st==="SUBSCRIBED"){relayRole=role;
+   $("rst").textContent=role==="host"?"Relais aktiv: dieses Geraet leitet an den Grip weiter":"Fernbedienung aktiv (Laptop muss Relais laufen haben)";
+   if(role==="remote")setTimeout(()=>remoteSend({cmd:"get"}),300);else broadcastState();readyText();
+   if(role==="remote")ctl();log("Relais verbunden als "+(role==="host"?"Relais":"Fernbedienung"))}
+  else if(st!=="CLOSED")log("Relais: "+st)})}
+$("rhost").onclick=()=>joinRelay("host");
+$("rremote").onclick=()=>joinRelay("remote");
+try{$("rcode").value=localStorage.getItem("jblcode")||""}catch(e){}
+const send=(f,v)=>raw(f,v).then(()=>log("-> 0x"+f.toString(16)+" = 0x"+v.toString(16))).catch(e=>log("ERR "+e));
+
+const hexb=a=>[...a].map(x=>x.toString(16).padStart(2,"0")).join("");
+const ctl=()=>[...document.querySelectorAll("button:not(#conn),input")].forEach(e=>e.disabled=false);
+for(const[n,v]of Object.entries(THEMES)){const b=document.createElement("button");b.textContent=n;b.disabled=true;b.onclick=()=>{if(mode!=="colors")stop();send(F.theme,v)};$("themes").appendChild(b)}
+document.querySelectorAll("[data-c]").forEach(b=>b.onclick=()=>{stop();send(F.color,+b.dataset.c)});
+let t;$("br").oninput=e=>{if(mode==="breathe"||mode==="music")stop();$("pv").textContent=e.target.value;clearTimeout(t);t=setTimeout(()=>send(F.brightness,0x80|+e.target.value),120)};
+$("on").onclick=()=>send(F.brightness,0x80|+$("br").value);
+$("off").onclick=()=>{stop();send(F.brightness,+$("br").value)};
+let gdev=null,retryT=null;
+async function connectDev(dev){clearTimeout(retryT);
+ try{const s=await(await dev.gatt.connect()).getPrimaryService(SVC);
+  tx=await s.getCharacteristic(TX);const rx=await s.getCharacteristic(RX);await rx.startNotifications();
+  rx.addEventListener("characteristicvaluechanged",e=>log("<- "+hexb(new Uint8Array(e.target.value.buffer))));
+  $("st").textContent="verbunden: "+dev.name;ctl();log("verbunden");return true}
+ catch(x){tx=null;log("ERR "+x);if(dev===gdev&&auto){log("Neuer Versuch in 15 s");retryT=setTimeout(()=>connectDev(dev),15000)}return false}}
+function watchDev(dev){if(gdev===dev)return;gdev=dev;
+ dev.addEventListener("gattserverdisconnected",()=>{tx=null;$("st").textContent="getrennt";log("Grip getrennt");
+  if(auto){log("Neuer Versuch in 15 s");retryT=setTimeout(()=>connectDev(dev),15000)}})}
+$("conn").onclick=async()=>{try{
+ const dev=await navigator.bluetooth.requestDevice({acceptAllDevices:true,optionalServices:[SVC]});
+ watchDev(dev);await connectDev(dev)}catch(x){log("ERR "+x)}};
+// ---- Automatik: Seite mit ?auto oeffnen ----
+const auto=new URLSearchParams(location.search).has("auto");
+async function autoStart(){
+ if(!navigator.bluetooth||!navigator.bluetooth.getDevices){log("Auto-Verbinden geht nicht: in chrome://flags 'Use the new permissions backend for Web Bluetooth' einschalten, Chrome neu starten, dann einmal von Hand verbinden.");return}
+ const devs=await navigator.bluetooth.getDevices();const dev=devs.find(d=>/grip/i.test(d.name||""))||devs[0];
+ if(!dev){log("Kein gespeicherter Grip. Einmal von Hand auf Verbinden druecken.");return}
+ log("Auto: verbinde mit "+(dev.name||"Grip"));watchDev(dev);
+ if($("rcode").value.trim().length>=6)joinRelay("host");else log("Kein Code gespeichert, Relais aus.");
+ await connectDev(dev)}
+if(auto){$("st").textContent="Automatik an";autoStart()}
+
+// ---- Lichtshow ----
+let last={},lastT=0,pend={},timer=null,run=0,mode="";
+const NAMES={breathe:"Atmen",colors:"Farbwechsel",themes:"Themes rotieren",music:"Musik"};
+function setMode(m){mode=m;$("mst").textContent=m?"Laeuft: "+NAMES[m]:"Keine Show aktiv"}
+function put(key,v){pend[key]=v;if(!timer)timer=setTimeout(flush,0)}
+async function flush(){timer=null;const w=Math.max(0,170-(Date.now()-lastT));
+ if(w>0){timer=setTimeout(flush,w);return}
+ const k=Object.keys(pend)[0];if(k===undefined)return;const v=pend[k];delete pend[k];
+ if(last[k]!==v){last[k]=v;lastT=Date.now();try{await raw(F[k],v)}catch(e){log("ERR "+e)}}
+ if(Object.keys(pend).length)timer=setTimeout(flush,170)}
+const pct=p=>put("brightness",0x80|Math.round(Math.max(3,Math.min(100,p))));
+const COL=[1,2,3,4],TH=Object.values(THEMES);
+function stop(){run++;setMode("");last={};document.getElementById("bar").style.width="0";if(window.ac){try{window.ac.close()}catch(e){}window.ac=null}}
+function sleepm(ms){return new Promise(r=>setTimeout(r,ms))}
+async function breathe(id){let t0=Date.now();while(run===id){const per=(11-+$("sp").value)*1000,lo=+$("lo").value,hi=+$("hi").value;
+ const x=(Math.sin((Date.now()-t0)/per*2*Math.PI-Math.PI/2)+1)/2;pct(lo+(hi-lo)*x);await sleepm(200)}}
+async function colors(id){let i=0;while(run===id){const sel=[...document.querySelectorAll("#cset input:checked")].map(x=>+x.value);const c=sel.length?sel:COL;put("color",c[i++%c.length]);await sleepm(170+(10-+$("sp").value)*300)}}
+async function themes(id){let i=0;pct(+$("hi").value);while(run===id){put("theme",TH[i++%TH.length]);await sleepm((11-+$("sp").value)*800+2000)}}
+async function music(id,stream){
+ const ac=new AudioContext();window.ac=ac;const an=ac.createAnalyser();an.fftSize=1024;ac.createMediaStreamSource(stream).connect(an);
+ const buf=new Uint8Array(an.frequencyBinCount);let avg=0,cur=0,beats=0,lastBeat=0;
+ const bins=Math.round(160/(ac.sampleRate/an.fftSize));
+ while(run===id){an.getByteFrequencyData(buf);let e=0;for(let i=1;i<=bins;i++)e+=buf[i];e/=bins;
+  const lo=+$("lo").value,hi=+$("hi").value,now=Date.now();
+  if(e>avg*1.25+8&&now-lastBeat>260){lastBeat=now;cur=hi;beats++;
+   if(beats%8===0)put("color",COL[(beats/8)%COL.length]);if(beats%32===0)put("theme",TH[(beats/32)%TH.length])}
+  else cur=Math.max(lo,cur-(hi-lo)*0.09);
+  avg=avg*0.92+e*0.08;pct(cur);document.getElementById("bar").style.width=Math.min(100,e/1.6)+"%";await sleepm(40)}
+ stream.getTracks().forEach(t=>t.stop())}
+document.querySelectorAll(".m").forEach(b=>b.onclick=()=>{stop();const id=run;setMode(b.dataset.m);({breathe,colors,themes})[b.dataset.m](id)});
+$("mstop").onclick=stop;
+$("mtab").onclick=async()=>{try{const s=await navigator.mediaDevices.getDisplayMedia({video:true,audio:true});
+ if(!s.getAudioTracks().length){log("Kein Ton geteilt. Beim Teilen 'Tab-Audio teilen' ankreuzen.");s.getTracks().forEach(t=>t.stop());return}
+ stop();setMode("music");music(run,s)}catch(e){log("ERR "+e)}};
+$("mmic").onclick=async()=>{try{const s=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}});stop();setMode("music");music(run,s)}catch(e){log("ERR "+e)}};
+
+
+// ---- Wecker (Sonnenaufgang) ----
+const DN=["Mo","Di","Mi","Do","Fr","Sa","So"];
+DN.forEach((d,i)=>{const l=document.createElement("label");l.style.marginRight="6px";l.style.whiteSpace="nowrap";l.innerHTML='<input type="checkbox" data-d="'+i+'"> '+d;$("adays").appendChild(l)});
+let acfg={on:false,time:"07:30",days:[0,0,0,0,0,0,0],rise:20,sound:"birds"};
+try{Object.assign(acfg,JSON.parse(localStorage.getItem("jblalarm")||"{}"))}catch(e){}
+let armed=null,ringing=false,ringT=null,snoozeAt=null,rising=false,testRun=false,remoteOk=false,wac=null;
+const amIHost=()=>!!tx||relayRole==="host";
+function cfgToUi(){$("atime").value=acfg.time;$("aon").checked=acfg.on;$("arise").value=String(acfg.rise);$("asound").value=acfg.sound;
+ document.querySelectorAll("#adays input").forEach(c=>c.checked=!!acfg.days[+c.dataset.d])}
+function uiToCfg(){return{on:$("aon").checked,time:$("atime").value||"07:30",days:[...document.querySelectorAll("#adays input")].map(c=>c.checked?1:0),rise:+$("arise").value,sound:$("asound").value}}
+function nextAlarm(c,from){if(!c.on)return null;const[h,m]=c.time.split(":").map(Number);const any=c.days.some(x=>x);
+ for(let d=0;d<8;d++){const t=new Date(from);t.setDate(t.getDate()+d);t.setHours(h,m,0,0);if(t<=from)continue;
+  if(!any||c.days[(t.getDay()+6)%7])return t}return null}
+const hhmm=t=>t.toTimeString().slice(0,5),wd=t=>DN[(t.getDay()+6)%7];
+function nextText(c,a){if(!c.on||!a)return"Aus";const s=new Date(a-c.rise*60000);return"Naechster: "+wd(a)+" "+hhmm(a)+" · Licht ab "+hhmm(s)}
+function rearm(){armed=testRun?armed:nextAlarm(acfg,new Date());$("anext").textContent=testRun?"Test laeuft":nextText(acfg,armed);broadcastState()}
+function saveCfg(c){acfg=c;try{localStorage.setItem("jblalarm",JSON.stringify(c))}catch(e){}cfgToUi();rearm()}
+// Ton freischalten: Chrome erlaubt Ton erst nach einem Klick auf die Seite
+function unlock(){try{if(!wac)wac=new AudioContext();if(wac.state!=="running")wac.resume()}catch(e){}readyText()}
+document.addEventListener("pointerdown",unlock,{capture:true});
+function readyText(){if(relayRole==="remote"){$("aready").textContent=remoteOk?"Auf dem Laptop gespeichert ✓":"Laptop hat noch nicht geantwortet (Relais dort an?)";return}
+ const parts=[tx?"Grip verbunden ✓":"Grip NICHT verbunden",wac&&wac.state==="running"?"Ton freigegeben ✓":"Ton gesperrt: einmal auf die Seite tippen"];
+ $("aready").textContent=parts.join(" · ")}
+setInterval(readyText,5000);
+// Sonnenaufgang: Rot -> Orange -> Blau, Helligkeit 3 -> 100 %
+let riseStart=0,riseLen=0,lastCol=0;
+function riseStep(){const p=Math.max(0,Math.min(1,(Date.now()-riseStart)/riseLen));
+ const col=p<1/3?4:p<2/3?1:3;if(col!==lastCol){lastCol=col;put("color",col)}pct(3+97*p)}
+function startRise(lenMs){stop();rising=true;riseStart=Date.now();riseLen=lenMs;lastCol=0;put("theme",THEMES.FREEZE);riseStep();log("Wecker: Sonnenaufgang startet")}
+// Toene, mit WebAudio erzeugt (keine Dateien noetig)
+function tone(f1,f2,t,dur,vol,type){const o=wac.createOscillator(),g=wac.createGain();o.type=type||"sine";
+ o.frequency.setValueAtTime(f1,t);o.frequency.exponentialRampToValueAtTime(f2,t+dur*0.6);
+ g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(vol,t+0.02);g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+ o.connect(g).connect(wac.destination);o.start(t);o.stop(t+dur+0.05)}
+let ringStart=0;
+function ringBurst(){if(!wac||acfg.sound==="none")return;if(wac.state!=="running")wac.resume();
+ const v=Math.min(0.8,0.1+0.7*(Date.now()-ringStart)/60000),t=wac.currentTime+0.05;
+ if(acfg.sound==="birds")for(let i=0;i<5;i++){const s=t+i*0.18+Math.random()*0.1,f=2200+Math.random()*1500;tone(f,f*1.5,s,0.12,v)}
+ else if(acfg.sound==="gong"){tone(523,520,t,2.5,v);tone(784,780,t+0.02,2.2,v*0.5)}
+ else for(let i=0;i<4;i++)tone(880,880,t+i*0.25,0.12,v,"square")}
+function ring(){ringing=true;rising=false;snoozeAt=null;if(testRun)armed=null;ringStart=Date.now();pct(100);
+ $("aring").style.display="block";log("Wecker klingelt");ringBurst();clearInterval(ringT);ringT=setInterval(()=>{ringBurst();
+  if(Date.now()-ringStart>20*60000){log("Wecker: nach 20 min automatisch aus");alarmStop()}},3000);broadcastState()}
+function alarmStop(){ringing=false;rising=false;snoozeAt=null;testRun=false;clearInterval(ringT);$("aring").style.display="none";log("Wecker aus (Licht bleibt an)");rearm()}
+function alarmSnooze(){ringing=false;clearInterval(ringT);snoozeAt=Date.now()+9*60000;$("aring").style.display="none";log("Schlummern bis "+hhmm(new Date(snoozeAt)));broadcastState()}
+function tick(){if(!amIHost()||relayRole==="remote")return;const now=Date.now();
+ if(snoozeAt&&now>=snoozeAt){ring();return}
+ if(!armed||ringing)return;const a=+armed,s=a-(testRun?60000:acfg.rise*60000);
+ if(now>a+30*60000){log("Wecker verpasst (Laptop schlief?): "+hhmm(armed));rearm();return}
+ if(now>=a){ring();if(!testRun&&!acfg.days.some(x=>x))saveCfg({...acfg,on:false});else if(!testRun)rearm();return}
+ if(now>=s){if(!rising)startRise(a-now);else riseStep()}}
+setInterval(tick,15000);
+// Relais: Handy stellt den Laptop-Wecker ein
+function broadcastState(){if(ch&&relayRole==="host")ch.send({type:"broadcast",event:"alarmstate",payload:{cfg:acfg,next:armed?+armed:null,ringing,snooze:snoozeAt}})}
+function alarmRelay(c,role){if(role==="host")c.on("broadcast",{event:"alarm"},({payload})=>{const a=payload||{};
+  if(a.cmd==="get")broadcastState();else if(a.cmd==="set"&&a.cfg)saveCfg({...acfg,...a.cfg});else if(a.cmd==="stop")alarmStop();else if(a.cmd==="snooze")alarmSnooze();else if(a.cmd==="test")alarmTest()});
+ else c.on("broadcast",{event:"alarmstate"},({payload})=>{remoteOk=true;acfg=payload.cfg;cfgToUi();
+  $("anext").textContent=payload.snooze?"Schlummert bis "+hhmm(new Date(payload.snooze)):nextText(acfg,payload.next?new Date(payload.next):null);
+  $("aring").style.display=payload.ringing?"block":"none";readyText()})}
+const remoteSend=cmd=>ch.send({type:"broadcast",event:"alarm",payload:cmd});
+function alarmTest(){testRun=true;armed=new Date(Date.now()+60000);startRise(60000);$("anext").textContent="Test: klingelt um "+armed.toTimeString().slice(0,8);broadcastState()}
+$("asave").onclick=()=>{const c=uiToCfg();if(relayRole==="remote"){remoteOk=false;remoteSend({cmd:"set",cfg:c});readyText();log("Wecker an Laptop geschickt")}else{saveCfg(c);log("Wecker gespeichert")}};
+$("atest").onclick=()=>{if(relayRole==="remote")remoteSend({cmd:"test"});else if(!tx)log("Test geht nur mit verbundenem Grip");else alarmTest()};
+$("astop").onclick=()=>relayRole==="remote"?remoteSend({cmd:"stop"}):alarmStop();
+$("asnooze").onclick=()=>relayRole==="remote"?remoteSend({cmd:"snooze"}):alarmSnooze();
+cfgToUi();rearm();readyText();
+</script><script src="android.js"></script>
+</body></html>

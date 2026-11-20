@@ -4,6 +4,12 @@ Sonnenaufgangs-Wecker für den JBL Grip als native Android-App (Kotlin). Läuft 
 
 **APK:** [grip-wecker.apk (neuester Build)](https://github.com/kasparkk/grip-wecker/releases/download/latest/grip-wecker.apk)
 
+## Oberfläche
+
+Die App zeigt die Web-App [JBL-grip-light-control](https://github.com/kasparkk/JBL-grip-light-control) (Lichtshow, Farben, Helligkeit, Musik, Relais) in einer WebView. Weil es in der WebView kein Web Bluetooth gibt, ersetzt `assets/web/bridge.js` `navigator.bluetooth` und leitet an die native BLE-Verbindung weiter. `assets/web/android.js` hängt das Wecker-Formular an den nativen Wecker, blendet die Einrichtung ein und verbindet den gespeicherten Grip automatisch.
+
+Web-App aktualisieren: `tools/sync-web.sh` ausführen, committen, pushen.
+
 ## Ablauf
 
 1. `setAlarmClock` weckt das Handy zum Beginn des Sonnenaufgangs (Weckzeit minus Vorlauf).

@@ -21,6 +21,7 @@ import android.os.Looper
 class GripBle(
     private val ctx: Context,
     private val address: String,
+    private val autoRetry: Boolean = true,
     private val onState: (String) -> Unit,
 ) {
     private val h = Handler(Looper.getMainLooper())
@@ -40,7 +41,7 @@ class GripBle(
         val adapter = bm?.adapter
         if (adapter == null || !adapter.isEnabled) {
             onState("Bluetooth aus")
-            retry()
+            if (autoRetry) retry()
             return
         }
         onState("verbinde …")
@@ -49,7 +50,7 @@ class GripBle(
             gatt = dev.connectGatt(ctx, false, cb, BluetoothDevice.TRANSPORT_LE)
         } catch (e: Exception) {
             onState("Fehler: ${e.message}")
-            retry()
+            if (autoRetry) retry()
         }
     }
 
@@ -73,8 +74,12 @@ class GripBle(
                     try { g.close() } catch (_: Exception) {}
                     if (gatt === g) gatt = null
                     if (!closed) {
-                        onState("getrennt, neuer Versuch in 10 s")
-                        retry()
+                        if (autoRetry) {
+                            onState("getrennt, neuer Versuch in 10 s")
+                            retry()
+                        } else {
+                            onState("getrennt")
+                        }
                     }
                 }
             }
@@ -98,7 +103,8 @@ class GripBle(
     }
 
     /** Wert fuer ein Feature setzen (wird gesendet, sobald verbunden). */
-    fun put(fid: Int, v: Int) {
+    fun put(fid: Int, v: Int, force: Boolean = false) {
+        if (force) last.remove(fid)
         if (last[fid] == v && !pending.containsKey(fid)) return
         pending.remove(fid)
         pending[fid] = v
