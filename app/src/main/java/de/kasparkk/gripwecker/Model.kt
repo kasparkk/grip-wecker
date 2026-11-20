@@ -127,6 +127,12 @@ object Store {
         p(c).edit().remove("grip").remove("gripName").apply()
     }
 
+    /** Gefundene BLE-Adresse fuer eine gespeicherte (evtl. klassische) Adresse. */
+    fun leAlias(c: Context, addr: String): String? = p(c).getString("le:$addr", null)
+    fun setLeAlias(c: Context, addr: String, le: String) {
+        p(c).edit().putString("le:$addr", le).apply()
+    }
+
     fun snoozeAt(c: Context): Long = p(c).getLong("snoozeAt", 0L)
     fun snoozeId(c: Context): Long = p(c).getLong("snoozeId", -1L)
     fun setSnooze(c: Context, at: Long, id: Long) {

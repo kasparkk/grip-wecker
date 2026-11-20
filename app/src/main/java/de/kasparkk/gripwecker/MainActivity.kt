@@ -193,6 +193,7 @@ class MainActivity : Activity() {
         val labels = ArrayList<String>()
         val addrs = ArrayList<String>()
         val names = ArrayList<String>()
+        val tags = ArrayList<String>()
         val adapter = ArrayAdapter(this, android.R.layout.simple_list_item_1, labels)
         fun add(name: String, addr: String, tag: String) {
             if (addrs.contains(addr)) return
@@ -201,12 +202,13 @@ class MainActivity : Activity() {
             labels.add(idx, "$name  ($tag)")
             addrs.add(idx, addr)
             names.add(idx, name)
+            tags.add(idx, tag)
             adapter.notifyDataSetChanged()
         }
         try {
             ad.bondedDevices?.forEach { d ->
                 val n = d.name ?: return@forEach
-                if (n.contains("jbl", true) || n.contains("grip", true)) add(n, d.address, "gekoppelt")
+                if (n.contains("jbl", true) || n.contains("grip", true)) add(n, d.address, "gekoppelt, klassisch")
             }
         } catch (_: Exception) {}
 
@@ -223,8 +225,14 @@ class MainActivity : Activity() {
             .setTitle("Grip wählen (suche …)")
             .setAdapter(adapter) { _, which ->
                 chosen = true
-                Store.setGrip(this, addrs[which], names[which])
-                if (fromWeb) js("__gb.picked(${q(addrs[which])},${q(names[which])})")
+                // Wie Chrome: die BLE-Adresse aus dem Scan nehmen, nicht die klassische Kopplungsadresse
+                var addr = addrs[which]
+                if (tags[which] != "BLE") {
+                    val i = names.indices.firstOrNull { tags[it] == "BLE" && names[it] == names[which] }
+                    if (i != null) addr = addrs[i]
+                }
+                Store.setGrip(this, addr, names[which])
+                if (fromWeb) js("__gb.picked(${q(addr)},${q(names[which])})")
                 else toast("${names[which]} gespeichert")
                 js("window.__gw&&__gw.refresh()")
             }
