@@ -5,6 +5,7 @@ import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothGatt
 import android.bluetooth.BluetoothGattCallback
 import android.bluetooth.BluetoothGattCharacteristic
+import android.bluetooth.BluetoothGattDescriptor
 import android.bluetooth.BluetoothManager
 import android.bluetooth.BluetoothProfile
 import android.content.Context
@@ -89,18 +90,72 @@ class GripBle(
 
         override fun onServicesDiscovered(g: BluetoothGatt, status: Int) {
             h.post {
-                val c = g.getService(Grip.SERVICE)?.getCharacteristic(Grip.TX)
+                val svc = g.getService(Grip.SERVICE)
+                val c = svc?.getCharacteristic(Grip.TX)
                 if (c == null) {
                     onState("Grip-Dienst nicht gefunden")
                     try { g.disconnect() } catch (_: Exception) {}
                     return@post
                 }
                 tx = c
-                ready = true
-                last.clear() // nach Neuverbindung alles erneut senden
-                onState("verbunden")
-                pump()
+                // Antworten abonnieren: der Grip nimmt Befehle erst danach an (wie startNotifications im Browser)
+                val rx = svc.getCharacteristic(Grip.RX)
+                val d = rx?.getDescriptor(Grip.CCCD)
+                if (rx != null && d != null && subscribe(g, rx, d)) {
+                    onLog?.invoke("abonniere Antworten …")
+                    h.postDelayed(readyFallback, 2500)
+                } else {
+                    onLog?.invoke("Abo nicht möglich, sende trotzdem")
+                    markReady()
+                }
             }
+        }
+
+        override fun onDescriptorWrite(g: BluetoothGatt, d: BluetoothGattDescriptor, status: Int) {
+            h.post {
+                onLog?.invoke("Abo " + if (status == BluetoothGatt.GATT_SUCCESS) "ok" else "Status $status")
+                markReady()
+            }
+        }
+
+        @Deprecated("Deprecated in Java")
+        @Suppress("DEPRECATION")
+        override fun onCharacteristicChanged(g: BluetoothGatt, ch: BluetoothGattCharacteristic) {
+            val v = ch.value ?: return
+            h.post { onLog?.invoke("<- " + hex(v)) }
+        }
+
+        override fun onCharacteristicChanged(g: BluetoothGatt, ch: BluetoothGattCharacteristic, value: ByteArray) {
+            h.post { onLog?.invoke("<- " + hex(value)) }
+        }
+    }
+
+    private fun hex(b: ByteArray) = b.joinToString("") { "%02x".format(it) }
+
+    private val readyFallback = Runnable { if (!ready && tx != null) { onLog?.invoke("Abo ohne Antwort, sende trotzdem"); markReady() } }
+
+    private fun markReady() {
+        h.removeCallbacks(readyFallback)
+        if (ready || tx == null) return
+        ready = true
+        last.clear() // nach Neuverbindung alles erneut senden
+        onState("verbunden")
+        pump()
+    }
+
+    @Suppress("DEPRECATION")
+    private fun subscribe(g: BluetoothGatt, rx: BluetoothGattCharacteristic, d: BluetoothGattDescriptor): Boolean {
+        return try {
+            g.setCharacteristicNotification(rx, true)
+            val v = BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
+            if (Build.VERSION.SDK_INT >= 33) {
+                g.writeDescriptor(d, v) == BluetoothGatt.GATT_SUCCESS
+            } else {
+                d.value = v
+                g.writeDescriptor(d)
+            }
+        } catch (e: Exception) {
+            false
         }
     }
 

@@ -15,6 +15,8 @@ import java.util.UUID
 object Grip {
     val SERVICE: UUID = UUID.fromString("65786365-6c70-6f69-6e74-2e636f6d0000")
     val TX: UUID = UUID.fromString("65786365-6c70-6f69-6e74-2e636f6d0002")
+    val RX: UUID = UUID.fromString("65786365-6c70-6f69-6e74-2e636f6d0001")
+    val CCCD: UUID = UUID.fromString("00002902-0000-1000-8000-00805f9b34fb")
     const val F_THEME = 0x0D40
     const val F_BRIGHT = 0x0D41
     const val F_COLOR = 0x0D46
