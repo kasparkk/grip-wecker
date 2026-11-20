@@ -2,7 +2,7 @@ name: APK bauen
 
 on:
   push:
-    branches: [main]
+    branches: [main, "test-*"]
   workflow_dispatch:
 
 permissions:
@@ -38,9 +38,10 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release delete latest --yes --cleanup-tag || true
-          gh release create latest grip-wecker.apk \
-            --title "Grip-Wecker (neuester Build)" \
+          TAG=latest; [ "${{ github.ref_name }}" = main ] || TAG="${{ github.ref_name }}"
+          gh release delete "$TAG" --yes --cleanup-tag || true
+          gh release create "$TAG" grip-wecker.apk \
+            --title "Grip-Wecker ($TAG)" \
             --notes "Build ${{ github.run_number }} aus ${{ github.sha }}" \
             --target ${{ github.sha }}
 
