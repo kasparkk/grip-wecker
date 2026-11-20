@@ -4,6 +4,10 @@
   if (!window.Android) return;
   var A = window.Android;
   var el = function (id) { return document.getElementById(id); };
+  // Fehler sichtbar machen (Protokoll unten)
+  window.addEventListener("error", function (e) {
+    try { log("JS-Fehler: " + e.message + " (Zeile " + e.lineno + ")"); } catch (x) {}
+  });
   var J = function (s, d) { try { return JSON.parse(s); } catch (e) { return d; } };
 
   // ---- Texte und Teile, die in der App keinen Sinn ergeben ----
@@ -213,6 +217,7 @@
     ab.appendChild(el("asave")); ab.appendChild(el("atest"));
     wc.appendChild(ab);
     wc.appendChild(el("aring"));
+    wc.appendChild(el("aready")); // bleibt versteckt, die Web-App schreibt hinein
     if (info) { info.removeAttribute("style"); info.className = "lb note"; wc.appendChild(info); }
 
     // Lichtshow
