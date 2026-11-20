@@ -1,7 +1,18 @@
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
     android:width="108dp" android:height="108dp"
     android:viewportWidth="108" android:viewportHeight="108">
-    <path android:fillColor="#E24B4A" android:pathData="M30,66h48v5H30z" />
-    <path android:fillColor="#EF9F27" android:pathData="M54,42a16,16 0,0 1,16 16H38a16,16 0,0 1,16 -16z" />
-    <path android:fillColor="#378ADD" android:pathData="M52,28h4v9h-4zM34,37l3,-3 5,5 -3,3zM66,39l5,-5 3,3 -5,5z" />
+    <!-- Wie icon.svg der Web-App: Farbverlauf-Pille auf Schwarz -->
+    <path android:pathData="M45.5,40a8.5,8.5 0,0 1,17 0v28a8.5,8.5 0,0 1,-17 0z">
+        <aapt:attr name="android:fillColor">
+            <gradient android:type="linear"
+                android:startX="45.5" android:startY="54"
+                android:endX="62.5" android:endY="54">
+                <item android:offset="0" android:color="#FFFF8A3D" />
+                <item android:offset="0.35" android:color="#FFFF2A7A" />
+                <item android:offset="0.7" android:color="#FF3A7BFF" />
+                <item android:offset="1" android:color="#FFEE0000" />
+            </gradient>
+        </aapt:attr>
+    </path>
 </vector>

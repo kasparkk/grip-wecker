@@ -8,5 +8,5 @@
         <item name="android:windowBackground">@color/bg</item>
     </style>
     <color name="bg">#F6F5F1</color>
-    <color name="icon_bg">#2C2C2A</color>
+    <color name="icon_bg">#111111</color>
 </resources>
