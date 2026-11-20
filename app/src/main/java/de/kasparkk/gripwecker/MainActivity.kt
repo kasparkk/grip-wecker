@@ -341,22 +341,30 @@ class MainActivity : Activity() {
                     return@post
                 }
                 val g = GripBle(this@MainActivity, id, false) { s ->
+                    js("log(${q("BLE: " + s)})")
                     when {
                         s == "verbunden" -> js("__gb.state('connected')")
                         s.startsWith("verbinde") || s.startsWith("verbunden,") -> {}
                         else -> js("__gb.state(${q(s)})")
                     }
                 }
+                g.onLog = { m -> js("log(${q("BLE -> " + m)})") }
                 grip = g
+                js("log(${q("BLE: verbinde mit $id")})")
                 g.connect()
             }
         }
 
         @JavascriptInterface
-        fun disconnect() { h.post { grip?.close(); grip = null } }
+        fun disconnect() { h.post { js("log('BLE: getrennt (von der Seite)')"); grip?.close(); grip = null } }
 
         @JavascriptInterface
-        fun write(fid: Int, v: Int) { h.post { grip?.put(fid, v, true) } }
+        fun write(fid: Int, v: Int) {
+            h.post {
+                val g = grip
+                if (g == null) js("log('BLE: keine native Verbindung, Befehl verworfen')") else g.put(fid, v, true)
+            }
+        }
 
         @JavascriptInterface
         fun setup(): String = setupItems().toString()

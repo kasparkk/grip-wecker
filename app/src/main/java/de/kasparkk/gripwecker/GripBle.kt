@@ -24,6 +24,8 @@ class GripBle(
     private val autoRetry: Boolean = true,
     private val onState: (String) -> Unit,
 ) {
+    /** Optional: Protokoll jedes Schreibversuchs (fuer die Fehlersuche). */
+    var onLog: ((String) -> Unit)? = null
     private val h = Handler(Looper.getMainLooper())
     private var gatt: BluetoothGatt? = null
     private var tx: BluetoothGattCharacteristic? = null
@@ -104,6 +106,7 @@ class GripBle(
 
     /** Wert fuer ein Feature setzen (wird gesendet, sobald verbunden). */
     fun put(fid: Int, v: Int, force: Boolean = false) {
+        if (!ready) onLog?.invoke("0x%04x = 0x%02x wartet (noch nicht bereit)".format(fid, v))
         if (force) last.remove(fid)
         if (last[fid] == v && !pending.containsKey(fid)) return
         pending.remove(fid)
@@ -124,7 +127,9 @@ class GripBle(
         val e = it.next()
         it.remove()
         if (last[e.key] != e.value) {
-            if (write(Grip.packet(e.key, e.value))) {
+            val ok = write(Grip.packet(e.key, e.value))
+            onLog?.invoke("0x%04x = 0x%02x %s".format(e.key, e.value, if (ok) "ok" else "FEHLER (${lastErr})"))
+            if (ok) {
                 last[e.key] = e.value
                 lastWrite = System.currentTimeMillis()
             } else {
@@ -135,19 +140,26 @@ class GripBle(
         if (pending.isNotEmpty()) pump()
     }
 
+    private var lastErr = ""
+
     @Suppress("DEPRECATION")
     private fun write(data: ByteArray): Boolean {
-        val g = gatt ?: return false
-        val c = tx ?: return false
+        val g = gatt ?: run { lastErr = "kein gatt"; return false }
+        val c = tx ?: run { lastErr = "keine Characteristic"; return false }
         return try {
             if (Build.VERSION.SDK_INT >= 33) {
-                g.writeCharacteristic(c, data, BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE) == BluetoothGatt.GATT_SUCCESS
+                val r = g.writeCharacteristic(c, data, BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE)
+                lastErr = "Code $r"
+                r == BluetoothGatt.GATT_SUCCESS
             } else {
                 c.writeType = BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE
                 c.value = data
-                g.writeCharacteristic(c)
+                val r = g.writeCharacteristic(c)
+                lastErr = "false"
+                r
             }
         } catch (e: Exception) {
+            lastErr = e.toString()
             false
         }
     }
