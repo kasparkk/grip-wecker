@@ -2,6 +2,8 @@
 // Die Web-App bleibt unveraendert; navigator.bluetooth leitet hier an die native App weiter.
 (function () {
   if (!window.Android) return;
+  // Seite erst zeigen, wenn android.js das App-Design aufgebaut hat
+  document.write('<style>body{visibility:hidden}</style>');
   var A = window.Android;
   var cbs = { pick: null, connect: null };
   var dev = null;

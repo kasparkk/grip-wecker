@@ -116,4 +116,159 @@
   upd();
   setInterval(upd, 2000);
   setTimeout(autoConnect, 300);
+  try { design(); } catch (e) { document.body.classList.add("ready"); log("Design-Fehler: " + e); }
+
+  // ---- App-Design: Karten statt langer Liste (Stil in app.css) ----
+  function design() {
+    var B = document.body;
+    var link = document.createElement("link");
+    link.rel = "stylesheet"; link.href = "app.css";
+    var show = function () { B.classList.add("ready"); };
+    link.onload = show; link.onerror = show;
+    document.head.appendChild(link);
+    setTimeout(show, 1000);
+
+    function mk(tag, cls, html) {
+      var e = document.createElement(tag);
+      if (cls) e.className = cls;
+      if (html != null) e.innerHTML = html;
+      return e;
+    }
+    function card(title, right) {
+      var c = mk("div", "card"), h = mk("div", "row");
+      h.appendChild(mk("span", "ct", title));
+      if (right) h.appendChild(right);
+      c.appendChild(h);
+      return c;
+    }
+    function fold(title, cls) {
+      var d = mk("details", cls);
+      d.appendChild(mk("summary", null, title));
+      return d;
+    }
+
+    // Referenzen sammeln, bevor etwas verschoben wird
+    var st = el("st"), conn = el("conn");
+    var onoff = el("on").parentElement;
+    var aon = el("aon"), aonLabel = aon.parentElement, timeBox = el("atime").parentElement;
+    var riseDiv = el("arise").parentElement, gradText = riseDiv.nextElementSibling, sndDiv = el("asound").parentElement;
+    var modes = document.querySelector("button.m").parentElement;
+    var pShow = modes.previousElementSibling, pFarb = el("mst").nextElementSibling;
+    var spL = el("sp").parentElement, pHell = spL.nextElementSibling, loL = el("lo").parentElement, hiL = el("hi").parentElement;
+    var rcodeL = el("rcode").parentElement, pRelay = rcodeL.previousElementSibling;
+
+    // Kopf
+    var hdr = mk("div", "hdr"), top = mk("div", "row");
+    top.appendChild(mk("div", "brand", '<i class="logo"></i><span>Grip-Wecker</span>'));
+    st.className = "chip";
+    top.appendChild(st);
+    var r2 = mk("div", "row2");
+    conn.classList.add("pri");
+    r2.appendChild(conn); r2.appendChild(other);
+    hdr.appendChild(top); hdr.appendChild(r2);
+    var chipState = function () { st.classList.toggle("ok", /^verbunden/.test(st.textContent)); };
+    new MutationObserver(chipState).observe(st, { childList: true, characterData: true, subtree: true });
+    chipState();
+    setup.style.border = "";
+    setup.className = "card setup";
+
+    // Licht
+    onoff.className = "pills";
+    el("on").textContent = "An"; el("off").textContent = "Aus";
+    var lc = card("Licht", onoff);
+    var dots = mk("div", "dots");
+    document.querySelectorAll("button.c").forEach(function (b) { dots.appendChild(b); });
+    dots.addEventListener("click", function (e) {
+      if (!e.target.classList.contains("c")) return;
+      dots.querySelectorAll(".c").forEach(function (b) { b.classList.toggle("sel", b === e.target); });
+    });
+    lc.appendChild(dots);
+    var brow = mk("div", "row lb"), val = mk("span", "val");
+    brow.appendChild(mk("span", null, "Helligkeit"));
+    val.appendChild(el("pv")); val.appendChild(document.createTextNode(" %"));
+    brow.appendChild(val);
+    brow.style.marginTop = "10px";
+    lc.appendChild(brow); lc.appendChild(el("br"));
+
+    // Wecker
+    var wc = card("Wecker", aon);
+    wc.appendChild(el("atime"));
+    el("anext").className = "lb";
+    wc.appendChild(el("anext"));
+    var ad = el("adays");
+    Array.from(ad.childNodes).forEach(function (n) { if (n.nodeType === 3 || n.nodeName === "BR") n.remove(); });
+    ad.querySelectorAll("label").forEach(function (l) { l.style.cssText = ""; });
+    wc.appendChild(mk("div", "lb sp", "Tage (keiner = einmalig)"));
+    wc.appendChild(ad);
+    wc.appendChild(mk("div", "grbar"));
+    wc.appendChild(mk("div", "row lb small", "<span>Rot 3 %</span><span>Orange</span><span>Blau 100 %</span>"));
+    function srow(label, sel) { var r = mk("div", "row set"); r.appendChild(mk("span", "lb", label)); r.appendChild(sel); return r; }
+    wc.appendChild(srow("Vorlauf", el("arise")));
+    wc.appendChild(srow("Ton", el("asound")));
+    line.style.cssText = "";
+    line.className = "lb set";
+    wc.appendChild(line);
+    var ab = mk("div", "row btns");
+    el("asave").classList.add("pri");
+    ab.appendChild(el("asave")); ab.appendChild(el("atest"));
+    wc.appendChild(ab);
+    wc.appendChild(el("aring"));
+    if (info) { info.removeAttribute("style"); info.className = "lb note"; wc.appendChild(info); }
+
+    // Lichtshow
+    var sc = card("Lichtshow");
+    sc.appendChild(mk("div", "lb sp", "Grip-Themes"));
+    el("themes").className = "pills";
+    el("themes").addEventListener("click", function (e) {
+      if (e.target.tagName !== "BUTTON") return;
+      el("themes").querySelectorAll("button").forEach(function (b) { b.classList.toggle("sel", b === e.target); });
+    });
+    el("themes").querySelectorAll("button").forEach(function (b) {
+      b.textContent = b.textContent.charAt(0) + b.textContent.slice(1).toLowerCase();
+    });
+    sc.appendChild(el("themes"));
+    sc.appendChild(mk("div", "lb sp", "Eigene Show"));
+    modes.className = "pills";
+    el("mstop").textContent = "Stopp";
+    sc.appendChild(modes);
+    el("mst").removeAttribute("style");
+    el("mst").className = "lb";
+    sc.appendChild(el("mst"));
+    sc.appendChild(el("beat"));
+    var more = fold("Mehr Einstellungen", "more");
+    [pShow, el("cset"), pFarb, spL, pHell, loL, hiL].forEach(function (n) {
+      if (!n) return;
+      if (n.tagName === "P") n.removeAttribute("style");
+      more.appendChild(n);
+    });
+    sc.appendChild(more);
+
+    // Fernbedienung und Protokoll eingeklappt
+    var rc = fold("Fernbedienung (Relais)", "card");
+    if (pRelay) { pRelay.removeAttribute("style"); rc.appendChild(pRelay); }
+    rc.appendChild(rcodeL);
+    var rb = mk("div", "row2");
+    rb.appendChild(el("rhost")); rb.appendChild(el("rremote"));
+    rc.appendChild(rb);
+    el("rst").removeAttribute("style");
+    rc.appendChild(el("rst"));
+    var lg = fold("Protokoll", "card");
+    lg.appendChild(el("log"));
+
+    // Alte Reste entfernen, neue Ordnung einsetzen
+    [aonLabel, timeBox, riseDiv, gradText, sndDiv].forEach(function (n) { if (n && n.parentElement) n.remove(); });
+    Array.from(B.children).forEach(function (c) { if (c.tagName !== "SCRIPT" && c.tagName !== "STYLE" && c.tagName !== "LINK") c.remove(); });
+    B.prepend(hdr, setup, lc, wc, sc, rc, lg);
+
+    // Regler: gefuellter Teil im Farbverlauf
+    var fill = function () {
+      document.querySelectorAll("input[type=range]").forEach(function (r) {
+        var p = (r.value - r.min) / ((r.max - r.min) || 1) * 100;
+        r.style.setProperty("--p", p + "%");
+      });
+    };
+    document.addEventListener("input", fill);
+    setInterval(fill, 1000);
+    fill();
+  }
 })();
