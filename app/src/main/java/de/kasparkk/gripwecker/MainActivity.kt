@@ -104,6 +104,53 @@ class MainActivity : Activity() {
         js("window.__gw&&__gw.refresh()")
     }
 
+    // Im Hintergrund die BLE-Verbindung freigeben, damit der Grip fuer Chrome/Laptop frei ist.
+    // Beim Zurueckkommen still neu verbinden; die Web-App merkt davon nichts.
+    private var gripAddr: String? = null
+    private var bgAddr: String? = null
+
+    override fun onStop() {
+        super.onStop()
+        if (grip != null && gripAddr != null) {
+            bgAddr = gripAddr
+            grip?.close()
+            grip = null
+        }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        val a = bgAddr ?: return
+        bgAddr = null
+        js("log('BLE: zurück in der App, verbinde neu')")
+        startGrip(a)
+    }
+
+    private fun startGrip(id: String) {
+        grip?.close()
+        grip = null
+        gripAddr = null
+        if (!btPerms().all { has(it) }) {
+            requestPermissions(btPerms().toTypedArray(), REQ_BT)
+            js("__gb.state('Bluetooth-Berechtigung fehlt')")
+            return
+        }
+        val g = GripBle(this, id, false) { s ->
+            js("log(${q("BLE: " + s)})")
+            when {
+                s == "verbunden" -> js("__gb.state('connected')")
+                // Zwischenstaende (stille Wiederholungen) nicht an die Web-App melden
+                s.startsWith("verbinde") || s.startsWith("verbunden,") -> {}
+                else -> js("__gb.state(${q(s)})")
+            }
+        }
+        g.onLog = { m -> js("log(${q("BLE -> " + m)})") }
+        grip = g
+        gripAddr = id
+        js("log(${q("BLE: verbinde mit $id")})")
+        g.connect()
+    }
+
     override fun onDestroy() {
         grip?.close()
         grip = null
@@ -250,7 +297,11 @@ class MainActivity : Activity() {
         }
         h.postDelayed({
             try { scanner?.stopScan(cb) } catch (_: Exception) {}
-            if (dlg.isShowing) dlg.setTitle(if (labels.isEmpty()) "Nichts gefunden. Grip an?" else "Grip wählen")
+            if (dlg.isShowing) dlg.setTitle(when {
+                labels.isEmpty() -> "Nichts gefunden. Grip an?"
+                !tags.contains("BLE") -> "Grip nicht per BLE sichtbar. Ist er mit dem Laptop (Relais) oder Chrome verbunden? Dort trennen."
+                else -> "Grip wählen"
+            })
         }, 15_000)
     }
 
@@ -339,32 +390,10 @@ class MainActivity : Activity() {
         fun pickDevice() { h.post { pickGrip(fromWeb = true) } }
 
         @JavascriptInterface
-        fun connect(id: String) {
-            h.post {
-                grip?.close()
-                grip = null
-                if (!btPerms().all { has(it) }) {
-                    requestPermissions(btPerms().toTypedArray(), REQ_BT)
-                    js("__gb.state('Bluetooth-Berechtigung fehlt')")
-                    return@post
-                }
-                val g = GripBle(this@MainActivity, id, false) { s ->
-                    js("log(${q("BLE: " + s)})")
-                    when {
-                        s == "verbunden" -> js("__gb.state('connected')")
-                        s.startsWith("verbinde") || s.startsWith("verbunden,") -> {}
-                        else -> js("__gb.state(${q(s)})")
-                    }
-                }
-                g.onLog = { m -> js("log(${q("BLE -> " + m)})") }
-                grip = g
-                js("log(${q("BLE: verbinde mit $id")})")
-                g.connect()
-            }
-        }
+        fun connect(id: String) { h.post { bgAddr = null; startGrip(id) } }
 
         @JavascriptInterface
-        fun disconnect() { h.post { js("log('BLE: getrennt (von der Seite)')"); grip?.close(); grip = null } }
+        fun disconnect() { h.post { js("log('BLE: getrennt (von der Seite)')"); bgAddr = null; grip?.close(); grip = null; gripAddr = null } }
 
         @JavascriptInterface
         fun write(fid: Int, v: Int) {

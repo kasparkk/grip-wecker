@@ -167,7 +167,7 @@ class GripBle(
     private val scanTimeout = Runnable {
         if (scanCb != null) {
             stopScan()
-            log("Grip im Scan nicht gesehen")
+            log("Grip im Scan nicht gesehen. Vermutlich ist er gerade mit einem anderen Gerät verbunden (Laptop-Relais, Chrome?)")
             failedAfterScan()
         }
     }
